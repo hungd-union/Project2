@@ -140,9 +140,15 @@ void pinConfig(void){
 }
 
 
-void adcConfig(void) {
+void lightOn(void) {
+    gpio_set_level (leftLamp, 1);
+    gpio_set_level (rightLamp, 1);
 }
 
+void lightOff(void) {
+    gpio_set_level (leftLamp, 0);
+    gpio_set_level (rightLamp, 0);
+}
 
 void app_main(void) {
     pinConfig();
@@ -260,7 +266,8 @@ void app_main(void) {
                     adc_cali_raw_to_voltage
                     (adc1_cali_chan_handle, adc_bits, &adc_mV);         // Convert to mV
 
-                    printf ("%d\n", adc_mV);
+                    if (adc_mV < 550) {lightOn();}
+                    if (adc_mV > 1300) {lightOff();}
                 }
             }
         }
