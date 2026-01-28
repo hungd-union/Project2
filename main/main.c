@@ -36,6 +36,15 @@ bool engine = false;
 bool hold = false;
 
 int delayMS = 10; //ms
+int off = 0; //mV
+int middle = 3100 //mv Anything over 3000
+int middle2 = 1620 //
+//Off is anything less than 1000
+//1000 to 2000 is on
+//2000 is a auto
+//1300 and 500
+//1300 is daylight
+//500 is dusk 
 
 /**
  * returns a boolean determining whether all of the car alarms systems have been satisifed ie:
