@@ -4,6 +4,9 @@
 #include "driver/gpio.h"
 #include <sdkconfig.h>
 #include <stdbool.h>
+#include "esp_adc/adc_oneshot.h"
+#include "math.h"
+
 
 
 #define greenLED_PIN    16        
