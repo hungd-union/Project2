@@ -34,11 +34,13 @@ bool pSense = false;
 bool psbelt = false;
 bool engine = false;
 bool hold = false;
+bool autoOn = false;
+bool initial_message = true;
 
 int delayMS = 10; //ms
 int off = 0; //mV
-int middle = 3100 //mv Anything over 3000
-int middle2 = 1620 //
+int middle = 3100; //mv Anything over 3000
+int middle2 = 1620; //
 //Off is anything less than 1000
 //1000 to 2000 is on
 //2000 is a auto
@@ -139,6 +141,11 @@ void pinConfig(void){
 
 
 void adcConfig(void) {
+}
+
+
+void app_main(void) {
+    pinConfig();
     //ADC Config LightSensor
     adc_oneshot_unit_init_cfg_t init_config1 = {
         .unit_id = ADC_UNIT_1,
@@ -174,14 +181,10 @@ void adcConfig(void) {
         .atten = ADC_ATTEN,
         .bitwidth = BITWIDTH
     };
-                                                      // Calibration config
+
     adc_cali_create_scheme_curve_fitting                // Populate cal handle
     (&cali_config_POT, &adc1_cali_chan_handle);
-}
 
-void app_main(void) {
-    pinConfig();
-    adcConfig();
     bool initial_message = true;
     while(1){
         bool ignitEn = ignitionPressed();
@@ -243,9 +246,23 @@ void app_main(void) {
             }
 
             else {
-                
-            }
+                autoOn = true;
 
+
+
+                //LDR reading
+                if (autoOn) {
+                    int adc_bits;
+                    adc_oneshot_read
+                    (adc1_handle, CHANNEL_LDR, &adc_bits);              // Read ADC bits
+                    
+                    int adc_mV;
+                    adc_cali_raw_to_voltage
+                    (adc1_cali_chan_handle, adc_bits, &adc_mV);         // Convert to mV
+
+                    printf ("%d\n", adc_mV);
+                }
+            }
         }
 
     vTaskDelay(delayMS / portTICK_PERIOD_MS);
