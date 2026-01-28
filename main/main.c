@@ -8,7 +8,6 @@
 #include "math.h"
 
 
-
 #define greenLED_PIN    16        
 #define redLED_PIN      15      
 #define ignitionButton  4
@@ -19,6 +18,14 @@
 #define Alarm 17
 #define leftLamp 18
 #define rightLamp 8
+
+
+#define CHANNEL_LDR     ADC_CHANNEL_8
+#define CHANNEL_POT     ADC_CHANNEL_9
+#define ADC_ATTEN       ADC_ATTEN_DB_12
+#define BITWIDTH        ADC_BITWIDTH_12
+#define DELAY_MS        10                  // Loop delay (ms)
+#define NUM_SAMPLES     1000                // Number of samples
 
 
 bool dSense = false;
@@ -135,43 +142,32 @@ void adcConfig(void) {
         .bitwidth = BITWIDTH
     };                                                  // Channel config
     adc_oneshot_config_channel                          // Configure the chan
-    (adc1_handle, LightSensorAdcChannel, &config);
+    (adc1_handle, CHANNEL_LDR, &config);
 
-    adc_cali_curve_fitting_config_t cali_config = {
+    adc_cali_curve_fitting_config_t cali_config_LDR = {
         .unit_id = ADC_UNIT_1,
-        .chan = LightSensorAdcChannel,
+        .chan = CHANNEL_LDR,
         .atten = ADC_ATTEN,
         .bitwidth = BITWIDTH
     };                                                  // Calibration config
     adc_cali_handle_t adc1_cali_chan_handle;            // Calibration handle
     adc_cali_create_scheme_curve_fitting                // Populate cal handle
-    (&cali_config, &adc1_cali_chan_handle);
+    (&cali_config_LDR, &adc1_cali_chan_handle);
 
 
-    //ADC Config Potentiometer
-    adc_oneshot_unit_init_cfg_t init_config1 = {        
-        .unit_id = ADC_UNIT_1,
-    };                                                  // Unit configuration
-    adc_oneshot_unit_handle_t adc1_handle;              // Unit handle
-    adc_oneshot_new_unit(&init_config1, &adc1_handle);  // Populate unit handle
-   
-    adc_oneshot_chan_cfg_t config = {
-        .atten = ADC_ATTEN,
-        .bitwidth = BITWIDTH
-    };                                                  // Channel config
+    //ADC Config Potentiometer                               // Channel config
     adc_oneshot_config_channel                          // Configure the chan
-    (adc1_handle, ModeAdcChannel, &config);
+    (adc1_handle, CHANNEL_POT, &config);
     
-    adc_cali_curve_fitting_config_t cali_config = {
+    adc_cali_curve_fitting_config_t cali_config_POT = {
         .unit_id = ADC_UNIT_1,
-        .chan = ModeAdcChannel,
+        .chan = CHANNEL_POT,
         .atten = ADC_ATTEN,
         .bitwidth = BITWIDTH
-    };                                                  // Calibration config
-    adc_cali_handle_t adc1_cali_chan_handle;            // Calibration handle
+    };
+                                                      // Calibration config
     adc_cali_create_scheme_curve_fitting                // Populate cal handle
-    (&cali_config, &adc1_cali_chan_handle);
-
+    (&cali_config_POT, &adc1_cali_chan_handle);
 }
 
 void app_main(void) {
