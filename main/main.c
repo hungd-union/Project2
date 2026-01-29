@@ -41,6 +41,9 @@ int delayMS = 10; //ms
 int off = 0; //mV
 int middle = 3100; //mv Anything over 3000
 int middle2 = 1620; //
+int timer = 0;
+bool dusk = false;
+bool daylight = false;
 //Off is anything less than 1000
 //1000 to 2000 is on
 //2000 is a auto
@@ -264,10 +267,14 @@ void app_main(void) {
                 if (adc_pot_mV < 1000) {
                     lightOff();
                     autoOn = false;
+                    dusk = false;
+                    daylight = false;
                 }
                 else if (adc_pot_mV >= 1000 && adc_pot_mV < 2000) {
                     lightOn();
                     autoOn = false;
+                    dusk = false;
+                    daylight = false;
                 }
                 else {autoOn = true;}
 
@@ -283,11 +290,19 @@ void app_main(void) {
                     (adc1_cali_chan_handle, adc_bits, &adc_mV);         // Convert to mV
 
                     if (adc_mV < 550) {
-                        vTaskDelay(2000 / portTICK_PERIOD_MS);
-                        lightOn();}
+                        if (!dusk || timer >2000) {timer = 0;}
+                        timer += delayMS;
+                        if (timer == 2000) {lightOn();}
+                        dusk = true;
+                        daylight = false;
+                    }
                     if (adc_mV > 1300) {
-                        vTaskDelay(1000 / portTICK_PERIOD_MS);
-                        lightOff();}
+                        if (!daylight || timer >2000) {timer = 0;}
+                        timer += delayMS;
+                        if (timer == 1000) {lightOff();}
+                        dusk = false;
+                        daylight = true;
+                    }
                 }
             }
         }
