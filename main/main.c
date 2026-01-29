@@ -195,6 +195,7 @@ void app_main(void) {
     while(1){
         bool ignitEn = ignitionPressed();
         if (!engine) {
+            lightOff();
             bool ready = enable();
 
             if (dSense && initial_message){
@@ -252,8 +253,23 @@ void app_main(void) {
             }
 
             else {
-                autoOn = true;
+                int adc_bits_pot;
+                adc_oneshot_read
+                (adc1_handle, CHANNEL_POT, &adc_bits_pot);              // Read ADC bits
+                    
+                int adc_pot_mV;
+                adc_cali_raw_to_voltage
+                (adc1_cali_chan_handle, adc_bits_pot, &adc_pot_mV);         // Convert to mV
 
+                if (adc_pot_mV < 1000) {
+                    lightOff();
+                    autoOn = false;
+                }
+                else if (adc_pot_mV >= 1000 && adc_pot_mV < 2000) {
+                    lightOn();
+                    autoOn = false;
+                }
+                else {autoOn = true;}
 
 
                 //LDR reading
