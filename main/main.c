@@ -282,8 +282,12 @@ void app_main(void) {
                     adc_cali_raw_to_voltage
                     (adc1_cali_chan_handle, adc_bits, &adc_mV);         // Convert to mV
 
-                    if (adc_mV < 550) {lightOn();}
-                    if (adc_mV > 1300) {lightOff();}
+                    if (adc_mV < 550) {
+                        vTaskDelay(2000 / portTICK_PERIOD_MS);
+                        lightOn();}
+                    if (adc_mV > 1300) {
+                        vTaskDelay(1000 / portTICK_PERIOD_MS);
+                        lightOff();}
                 }
             }
         }
