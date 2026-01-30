@@ -18,13 +18,15 @@
 #define Alarm 17
 #define leftLamp 18
 #define rightLamp 8
+#define headLightSW 11
+#define highBeam 7
 
 
 #define CHANNEL_LDR     ADC_CHANNEL_8
 #define CHANNEL_POT     ADC_CHANNEL_9
 #define ADC_ATTEN       ADC_ATTEN_DB_12
 #define BITWIDTH        ADC_BITWIDTH_12
-#define DELAY_MS        10                  // Loop delay (ms)
+#define DELAY_MS        20               // Loop delay (ms)
 #define NUM_SAMPLES     1000                // Number of samples
 
 
@@ -36,20 +38,20 @@ bool engine = false;
 bool hold = false;
 bool autoOn = false;
 bool initial_message = true;
+bool HL = false;
 
 int delayMS = 10; //ms
 int off = 0; //mV
 int middle = 3100; //mv Anything over 3000
 int middle2 = 1620; //
 int timer = 0;
+int daylight_lvl = 2350;
+int dusk_lvl = 1850;
 bool dusk = false;
 bool daylight = false;
-//Off is anything less than 1000
-//1000 to 2000 is on
-//2000 is a auto
-//1300 and 500
-//1300 is daylight
-//500 is dusk 
+//pot input < 1000 is off, 1000 to 2000 is on, >2000 is a auto.
+//Photoresistor ideal: 1300 is daylight, 500 is dusk
+//Realistically, daylight = 2400, dusk = 1800 
 
 /**
  * returns a boolean determining whether all of the car alarms systems have been satisifed ie:
@@ -118,6 +120,8 @@ void pinConfig(void){
     gpio_reset_pin(driveSeatSense);
     gpio_reset_pin(passengerSeatSense);
     gpio_reset_pin(Alarm);
+    gpio_reset_pin(headLightSW);
+    gpio_reset_pin(highBeam);
 
     gpio_set_direction(greenLED_PIN, GPIO_MODE_OUTPUT);
     gpio_set_direction(redLED_PIN, GPIO_MODE_OUTPUT);
@@ -129,12 +133,16 @@ void pinConfig(void){
     gpio_set_direction(passengerSeatBelt, GPIO_MODE_INPUT);
     gpio_set_direction(driveSeatSense, GPIO_MODE_INPUT);
     gpio_set_direction(passengerSeatSense, GPIO_MODE_INPUT);
+    gpio_set_direction(headLightSW, GPIO_MODE_INPUT);
+    gpio_set_direction(highBeam, GPIO_MODE_OUTPUT);
 
     gpio_pullup_en(ignitionButton);
     gpio_pullup_en(driveSeatBelt);
     gpio_pullup_en(driveSeatSense);
     gpio_pullup_en(passengerSeatBelt);
     gpio_pullup_en(passengerSeatSense);
+    gpio_pullup_dis(headLightSW);
+    gpio_pulldown_dis(headLightSW);
 
     gpio_set_level(greenLED_PIN, 0);
     gpio_set_level(redLED_PIN, 0);
@@ -146,11 +154,13 @@ void pinConfig(void){
 void lightOn(void) {
     gpio_set_level (leftLamp, 1);
     gpio_set_level (rightLamp, 1);
+    gpio_set_level (highBeam, HL);
 }
 
 void lightOff(void) {
     gpio_set_level (leftLamp, 0);
     gpio_set_level (rightLamp, 0);
+    gpio_set_level (highBeam, 0);
 }
 
 void app_main(void) {
@@ -289,14 +299,14 @@ void app_main(void) {
                     adc_cali_raw_to_voltage
                     (adc1_cali_chan_handle, adc_bits, &adc_mV);         // Convert to mV
 
-                    if (adc_mV < 550) {
+                    if (adc_mV < dusk_lvl) {
                         if (!dusk || timer >2000) {timer = 0;}
                         timer += delayMS;
                         if (timer == 2000) {lightOn();}
                         dusk = true;
                         daylight = false;
                     }
-                    if (adc_mV > 1300) {
+                    if (adc_mV > daylight_lvl) {
                         if (!daylight || timer >2000) {timer = 0;}
                         timer += delayMS;
                         if (timer == 1000) {lightOff();}
@@ -304,6 +314,10 @@ void app_main(void) {
                         daylight = true;
                     }
                 }
+                if (gpio_get_level(headLightSW)) {
+                    HL=true;
+                }
+                else {HL = false;}
             }
         }
 
