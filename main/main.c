@@ -1,3 +1,4 @@
+//Installing driver
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -7,7 +8,7 @@
 #include "esp_adc/adc_oneshot.h"
 #include "math.h"
 
-
+//Pin number declaration
 #define greenLED_PIN    16        
 #define redLED_PIN      15      
 #define ignitionButton  4
@@ -21,7 +22,7 @@
 #define headLightSW 11
 #define highBeam 7
 
-
+//ADC constants
 #define CHANNEL_LDR     ADC_CHANNEL_8
 #define CHANNEL_POT     ADC_CHANNEL_9
 #define ADC_ATTEN       ADC_ATTEN_DB_12
@@ -29,7 +30,7 @@
 #define DELAY_MS        20               // Loop delay (ms)
 #define NUM_SAMPLES     1000                // Number of samples
 
-
+//Global boolean values
 bool dSense = false;
 bool dsbelt = false;
 bool pSense = false;
@@ -39,16 +40,17 @@ bool hold = false;
 bool autoOn = false;
 bool initial_message = true;
 bool HL = false;
+bool dusk = false;
+bool daylight = false;
 
+//Global integers
 int delayMS = 10; //ms
 int off = 0; //mV
 int middle = 3100; //mv Anything over 3000
 int middle2 = 1620; //
 int timer = 0;
 int daylight_lvl = 2350;
-int dusk_lvl = 1850;
-bool dusk = false;
-bool daylight = false;
+int dusk_lvl = 2000;
 //pot input < 1000 is off, 1000 to 2000 is on, >2000 is a auto.
 //Photoresistor ideal: 1300 is daylight, 500 is dusk
 //Realistically, daylight = 2400, dusk = 1800 
@@ -95,6 +97,7 @@ bool enable(void){
      * And finally setting all of the output pins to zero
      */
 
+//Check if the Ignition button is pressed (only return true after a hold and release)
 bool ignitionPressed (void) {
     bool igniteHold = gpio_get_level(ignitionButton) == 0;
     if (igniteHold) {
@@ -108,7 +111,7 @@ bool ignitionPressed (void) {
     return false;
 }
 
-
+//Pin configuration function, setting up mode, pullup/down
 void pinConfig(void){
     gpio_reset_pin(greenLED_PIN);
     gpio_reset_pin(redLED_PIN);
@@ -150,13 +153,14 @@ void pinConfig(void){
 
 }
 
-
+//Turn on the headlights
 void lightOn(void) {
     gpio_set_level (leftLamp, 1);
     gpio_set_level (rightLamp, 1);
     gpio_set_level (highBeam, HL);
 }
 
+//Turn off the headlights
 void lightOff(void) {
     gpio_set_level (leftLamp, 0);
     gpio_set_level (rightLamp, 0);
@@ -208,16 +212,19 @@ void app_main(void) {
     while(1){
         bool ignitEn = ignitionPressed();
         if (!engine) {
+            //Check if the engine is not started.
             lightOff();
             bool ready = enable();
 
             if (dSense && initial_message){
+                //Prints out the welcome message when the driver is seated.
                 printf("Welcome to enhanced Alarm system model 218 -W25\n");
                 initial_message = false;
 
             }
 
             if(ready){
+                //Turn on greenlight if the engine is ready
                 gpio_set_level(greenLED_PIN, 1);
             }
             else {
@@ -225,6 +232,7 @@ void app_main(void) {
             }
 
             if(ignitEn){
+                //Turn on the engine if ready and ignite pressed.
                 if (ready) {
                     printf("Starting the engine.\n");
                     gpio_set_level(greenLED_PIN, 0);
@@ -233,6 +241,7 @@ void app_main(void) {
                 }
 
                 else {
+                    //Prints error and raise alarm otherwise.
                     gpio_set_level (Alarm, 1);
 
                     if (!dSense){
@@ -259,13 +268,16 @@ void app_main(void) {
         }
 
         else {
+            //Check if the engine is pressed
             if (ignitEn) {
+                //Turn off engine is ignite is pressed again.
                 gpio_set_level (redLED_PIN, 0);
                 printf("Stopping the engine.\n");
                 engine = false;
             }
 
             else {
+                //Read Potentiometer input.
                 int adc_bits_pot;
                 adc_oneshot_read
                 (adc1_handle, CHANNEL_POT, &adc_bits_pot);              // Read ADC bits
@@ -275,22 +287,25 @@ void app_main(void) {
                 (adc1_cali_chan_handle, adc_bits_pot, &adc_pot_mV);         // Convert to mV
 
                 if (adc_pot_mV < 1000) {
+                    //Headlight off mode
                     lightOff();
                     autoOn = false;
                     dusk = false;
                     daylight = false;
                 }
                 else if (adc_pot_mV >= 1000 && adc_pot_mV < 2000) {
+                    //Headlight on mode
                     lightOn();
                     autoOn = false;
                     dusk = false;
                     daylight = false;
                 }
-                else {autoOn = true;}
+                else {autoOn = true;} //Auto mode
 
 
                 //LDR reading
                 if (autoOn) {
+                    //Read Photoresistor input.
                     int adc_bits;
                     adc_oneshot_read
                     (adc1_handle, CHANNEL_LDR, &adc_bits);              // Read ADC bits
@@ -300,6 +315,7 @@ void app_main(void) {
                     (adc1_cali_chan_handle, adc_bits, &adc_mV);         // Convert to mV
 
                     if (adc_mV < dusk_lvl) {
+                        //Turn on light because of darkness.
                         if (!dusk || timer >2000) {timer = 0;}
                         timer += delayMS;
                         if (timer == 2000) {lightOn();}
@@ -307,20 +323,24 @@ void app_main(void) {
                         daylight = false;
                     }
                     if (adc_mV > daylight_lvl) {
+                        //Turn off light because of brightness
                         if (!daylight || timer >2000) {timer = 0;}
                         timer += delayMS;
                         if (timer == 1000) {lightOff();}
                         dusk = false;
                         daylight = true;
                     }
+
+                    //Do nothing if light is between these levels.
                 }
                 if (gpio_get_level(headLightSW)) {
                     HL=true;
+                    //Turn on Highbeam
                 }
-                else {HL = false;}
+                else {HL = false;} //Turn off Highbeam
             }
         }
 
-    vTaskDelay(delayMS / portTICK_PERIOD_MS);
+    vTaskDelay(delayMS / portTICK_PERIOD_MS); //Debounce wait time.
     }
 }
